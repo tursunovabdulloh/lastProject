@@ -5,9 +5,11 @@ import {
   RouterProvider,
 } from "react-router-dom";
 import { useSelector } from "react-redux";
-import Layout from "./Layout";
+
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import Dashboard from "./pages/Dashboard";
+import Products from "./pages/Products";
 
 const ProtectedRoutes: React.FC<{ children: JSX.Element }> = ({ children }) => {
   const user = useSelector((state: any) => state.user.user);
@@ -23,13 +25,17 @@ const routes = createBrowserRouter([
     path: "/",
     element: (
       <ProtectedRoutes>
-        <Layout />
+        <Home />
       </ProtectedRoutes>
     ),
     children: [
       {
-        index: true,
-        element: <Home />,
+        path: "/dashboard",
+        element: <Dashboard />,
+      },
+      {
+        path: "/products",
+        element: <Products />,
       },
     ],
   },

@@ -1,15 +1,20 @@
 // firebase.ts
 import { initializeApp, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
-import { getFirestore, Firestore } from "firebase/firestore";
+import {
+  getFirestore,
+  Firestore,
+  collection,
+  getDocs,
+} from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBNng0YTNXh3XxHcwa4Yg_LqT9MD_54SsA",
-  authDomain: "e-commerce-1c42e.firebaseapp.com",
-  projectId: "e-commerce-1c42e",
-  storageBucket: "e-commerce-1c42e.appspot.com",
-  messagingSenderId: "118562495716",
-  appId: "1:118562495716:web:6f39419d5afb0d938f20f1",
+  apiKey: "AIzaSyBNMn0b0SHZi2fzf6E5-mzkB7PHebXbWtE",
+  authDomain: "e-commerce-afe86.firebaseapp.com",
+  projectId: "e-commerce-afe86",
+  storageBucket: "e-commerce-afe86.appspot.com",
+  messagingSenderId: "11409749467",
+  appId: "1:11409749467:web:716f9eda5342d9aab923fe",
 };
 
 // Initialize Firebase

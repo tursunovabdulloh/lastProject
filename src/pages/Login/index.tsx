@@ -5,7 +5,7 @@ import { auth } from "../../firebase";
 import { message } from "antd";
 import { useDispatch } from "react-redux";
 import { login } from "../../store/userSlice";
-import "antd/dist/reset.css"; // Ant Design CSS
+import "antd/dist/reset.css";
 import style from "./style.module.css";
 
 interface LoginData {
