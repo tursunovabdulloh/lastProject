@@ -11,7 +11,7 @@ import {
   Table,
 } from "antd";
 import { SearchOutlined, UploadOutlined } from "@ant-design/icons";
-import { Product } from "../../types"; // Product interfeysini import qilish
+import { Product } from "../../types";
 
 export default function Products() {
   const [form] = Form.useForm();
