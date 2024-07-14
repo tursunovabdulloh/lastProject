@@ -28,11 +28,13 @@ interface STSTokenManager {
 }
 
 export interface Product {
-  id: number | string;
+  id: string;
   name: string;
   description: string;
   price: number;
   gender: "male" | "female";
   image?: any;
   sizes: string[];
+  color: "";
+  rating: number;
 }

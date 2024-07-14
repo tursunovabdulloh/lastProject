@@ -12,6 +12,7 @@ import {
   Popconfirm,
   Image,
   Checkbox,
+  Rate,
 } from "antd";
 import {
   SearchOutlined,
@@ -51,6 +52,9 @@ export default function Products() {
   const [file, setFile] = useState<any[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [sizes, setSizes] = useState<string[]>([]);
+  const [color, setColor] = useState<string>("#ffffff");
+  const [rating, setRating] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -101,12 +105,16 @@ export default function Products() {
         product.image ? product.image.map((url: string) => ({ url })) : []
       );
       setSizes(product.sizes);
+      setColor(product.color || "#ffffff");
+      setRating(product.rating || 0);
     } else {
       setEditText(false);
       setCurrentProduct(null);
       form.resetFields();
       setFile([]);
       setSizes([]);
+      setColor("#ffffff");
+      setRating(0);
     }
     setIsModalVisible(true);
   };
@@ -129,6 +137,7 @@ export default function Products() {
   };
 
   const handleOk = async () => {
+    setLoading(true);
     try {
       await form.validateFields();
       const values = form.getFieldsValue();
@@ -140,6 +149,8 @@ export default function Products() {
 
       values.image = imageUrls;
       values.sizes = sizes;
+      values.color = color;
+      values.rating = rating;
 
       if (editText && currentProduct) {
         const productsDocRef = doc(db, "products", currentProduct.id);
@@ -154,10 +165,9 @@ export default function Products() {
         message.success("Mahsulot muvaffaqiyatli yangilandi!");
       } else {
         const newProduct: Product = {
-          id: products.length + 1,
           ...values,
         };
-        const docRef = await addDoc(collection(db, "products"), values);
+        const docRef = await addDoc(collection(db, "products"), newProduct);
         newProduct.id = docRef.id;
         setProducts([...products, newProduct]);
         message.success("Mahsulot muvaffaqiyatli qo'shildi!");
@@ -166,6 +176,8 @@ export default function Products() {
     } catch (errorInfo) {
       console.log("Muvaffaqiyatsizlik:", errorInfo);
       message.error("Mahsulotni saqlashda xatolik yuz berdi.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -237,7 +249,30 @@ export default function Products() {
       key: "sizes",
       width: 100,
       render: (sizes: string[] | undefined) =>
-        sizes ? sizes.join(", ") : "N/A",
+        sizes ? sizes.join(",") : "N/A",
+    },
+    {
+      title: "Color",
+      dataIndex: "color",
+      key: "color",
+      width: 100,
+      render: (color: string) => (
+        <div
+          style={{
+            width: 30,
+            height: 30,
+            backgroundColor: color,
+            borderRadius: "50%",
+          }}
+        />
+      ),
+    },
+    {
+      title: "Rating",
+      dataIndex: "rating",
+      key: "rating",
+      width: 100,
+      render: (rating: number) => <Rate disabled value={rating} allowHalf />,
     },
     {
       title: "Image",
@@ -316,8 +351,8 @@ export default function Products() {
               width: 250,
               borderColor: "#d9d9d9",
               transition: "border 0.3s",
-              backgroundColor: "#fafafa", // Yengil fon rangi
-              boxShadow: "0 2px 4px rgba(0,0,0,0.1)", // Yengil soya effekti
+              backgroundColor: "#fafafa",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
             }}
           />
           <Select
@@ -339,13 +374,15 @@ export default function Products() {
         pagination={false}
         bordered
         size="middle"
+        scroll={{ x: 1000 }}
       />
       <Modal
         title={editText ? "Edit Product" : "Create Product"}
         visible={isModalVisible}
         onOk={handleOk}
         onCancel={handleCancel}
-        centered // Center the modal
+        confirmLoading={loading}
+        centered
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -398,6 +435,31 @@ export default function Products() {
             />
           </Form.Item>
           <Form.Item
+            name="color"
+            label="Color"
+            rules={[{ required: true, message: "Please select product color" }]}
+          >
+            <Input
+              type="color"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+            />
+          </Form.Item>
+          <Form.Item
+            name="rating"
+            label="Rating"
+            rules={[
+              { required: true, message: "Please select product rating" },
+            ]}
+          >
+            <Rate
+              value={rating}
+              onChange={(value) => setRating(value)}
+              allowHalf
+              style={{ fontSize: "44px" }}
+            />
+          </Form.Item>
+          <Form.Item
             name="image"
             label="Product Images"
             rules={[
@@ -405,7 +467,7 @@ export default function Products() {
             ]}
           >
             <Upload
-              multiple // Allow multiple uploads
+              multiple
               listType="picture-card"
               fileList={file}
               onChange={({ fileList }) => setFile(fileList)}
@@ -423,7 +485,7 @@ export default function Products() {
         visible={imagePreviewVisible}
         footer={null}
         onCancel={() => setImagePreviewVisible(false)}
-        centered // Center the modal
+        centered
       >
         {imageUrls.map((url, index) => (
           <Image key={index} src={url} style={{ marginBottom: 10 }} />
