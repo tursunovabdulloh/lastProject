@@ -1,4 +1,4 @@
-import React, { useState, FormEvent, ChangeEvent } from "react";
+import { useState, FormEvent, ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword, UserCredential } from "firebase/auth";
 import { auth } from "../../firebase";
@@ -13,7 +13,7 @@ interface LoginData {
   password: string;
 }
 
-const Login: React.FC = () => {
+function Login() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const [logindata, setLoginData] = useState<LoginData>({
@@ -84,6 +84,6 @@ const Login: React.FC = () => {
       </form>
     </div>
   );
-};
+}
 
 export default Login;

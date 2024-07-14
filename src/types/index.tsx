@@ -28,10 +28,11 @@ interface STSTokenManager {
 }
 
 export interface Product {
-  id: number;
+  id: number | string;
   name: string;
   description: string;
   price: number;
   gender: "male" | "female";
-  image?: any; // rasim uchun type ni aniqlab olishingiz mumkin
+  image?: any;
+  sizes: string[];
 }

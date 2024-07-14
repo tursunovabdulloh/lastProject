@@ -9,44 +9,59 @@ import {
   message,
   Select,
   Table,
+  Popconfirm,
+  Image,
+  Checkbox,
 } from "antd";
-import { SearchOutlined, UploadOutlined } from "@ant-design/icons";
+import {
+  SearchOutlined,
+  UploadOutlined,
+  EditOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { db } from "../../firebase";
 import { Product } from "../../types";
 
 export default function Products() {
   const [form] = Form.useForm();
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [imagePreviewVisible, setImagePreviewVisible] = useState(false);
+  const [editText, setEditText] = useState(true);
+  const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [searchText, setSearchText] = useState("");
   const [filterGender, setFilterGender] = useState("");
+  const [file, setFile] = useState<any[]>([]);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [sizes, setSizes] = useState<string[]>([]); // New state for sizes
+
+  console.log(file);
 
   useEffect(() => {
-    // Bu qismda mahsulotlarni yuklashingiz kerak, masalan Firebase yoki boshqa bir API dan
-    // Masalan, bu qismda API chaqiruvi qilish kerak:
-    // const fetchProducts = async () => {
-    //   const response = await fetch("API_URL");
-    //   const data = await response.json();
-    //   setProducts(data);
-    // };
-    // fetchProducts();
-    // Hozircha mahsulotlar uchun qiyosiy ma'lumotlar qo'shamiz
-    setProducts([
-      {
-        id: 1,
-        name: "Product 1",
-        description: "Description 1",
-        price: 100,
-        gender: "male",
-      },
-      {
-        id: 2,
-        name: "Product 2",
-        description: "Description 2",
-        price: 200,
-        gender: "female",
-      },
-    ]);
+    const fetchProducts = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "products"));
+        const productsData = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setProducts(productsData as Product[]);
+      } catch (error) {
+        console.error("Error fetching products: ", error);
+        message.error("Mahsulotlarni olishda xatolik yuz berdi.");
+      }
+    };
+
+    fetchProducts();
   }, []);
 
   useEffect(() => {
@@ -71,31 +86,88 @@ export default function Products() {
     filterAndSearchProducts();
   }, [searchText, filterGender, products]);
 
-  const showModal = () => {
+  const showModal = (product?: Product) => {
+    if (product) {
+      setEditText(true);
+      setCurrentProduct(product);
+      form.setFieldsValue(product);
+      setFile(product.image ? [{ url: product.image }] : []);
+      setSizes(product.sizes); // Set sizes for edit
+    } else {
+      setEditText(false);
+      setCurrentProduct(null);
+      form.resetFields();
+      setFile([]);
+      setSizes([]); // Reset sizes for new product
+    }
     setIsModalVisible(true);
+  };
+
+  const showImagePreview = (imageUrl: string) => {
+    setImageUrls([imageUrl]);
+    setImagePreviewVisible(true);
+  };
+
+  const uploadProductImages = async (file: any) => {
+    const storage = getStorage();
+    const storageRef = ref(storage, `products/${file.name}`);
+    await uploadBytes(storageRef, file);
+    return await getDownloadURL(storageRef);
   };
 
   const handleOk = async () => {
     try {
       await form.validateFields();
       const values = form.getFieldsValue();
-      const newProduct: Product = {
-        id: products.length + 1,
-        ...values,
-      };
-      console.log("Form values:", values);
-      message.success("Product added successfully!");
+      let imageUrl = values.image;
+
+      if (file && file.length > 0) {
+        imageUrl = await uploadProductImages(file[0].originFileObj);
+      }
+
+      values.image = imageUrl;
+      values.sizes = sizes; // Mahsulotga o'lchamlarni qo'shish
+
+      if (editText && currentProduct) {
+        const updatedProducts = products.map((product) =>
+          product.id === currentProduct.id
+            ? { ...currentProduct, ...values }
+            : product
+        );
+        setProducts(updatedProducts);
+        message.success("Mahsulot muvaffaqiyatli yangilandi!");
+      } else {
+        const newProduct: Product = {
+          id: products.length + 1,
+          ...values,
+        };
+        setProducts([...products, newProduct]);
+        message.success("Mahsulot muvaffaqiyatli qo'shildi!");
+
+        const docRef = await addDoc(collection(db, "products"), values);
+        console.log("Hujjat qo'shildi ID bilan: ", docRef.id);
+      }
       setIsModalVisible(false);
-      form.resetFields();
-      setProducts([...products, newProduct]);
     } catch (errorInfo) {
-      console.log("Failed:", errorInfo);
-      message.error("Failed to add product.");
+      console.log("Muvaffaqiyatsizlik:", errorInfo);
+      message.error("Mahsulotni saqlashda xatolik yuz berdi.");
     }
   };
 
   const handleCancel = () => {
     setIsModalVisible(false);
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      const productDocRef = doc(db, "products", id);
+      await deleteDoc(productDocRef);
+      setProducts(products.filter((product) => product.id !== id));
+      message.success("Product deleted successfully!");
+    } catch (error) {
+      console.error("Error deleting product: ", error);
+      message.error("Mahsulotni o'chirishda xatolik yuz berdi.");
+    }
   };
 
   const columns = [
@@ -124,6 +196,45 @@ export default function Products() {
       dataIndex: "gender",
       key: "gender",
     },
+    {
+      title: "Sizes",
+      dataIndex: "sizes",
+      key: "sizes",
+      render: (sizes: string[] | undefined) =>
+        sizes ? sizes.join(", ") : "N/A", // Display sizes
+    },
+    {
+      title: "Image",
+      dataIndex: "image",
+      key: "image",
+      render: (image: string) => (
+        <Button onClick={() => showImagePreview(image)}>
+          <Image src={image} width={50} height={50} preview={false} />
+        </Button>
+      ),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (record: any) => (
+        <div style={{ display: "flex", gap: 10 }}>
+          <Button
+            icon={<EditOutlined />}
+            onClick={() => showModal(record)}
+            type="primary"
+            size="middle"
+          />
+          <Popconfirm
+            title="Are you sure to delete this product?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Yes"
+            cancelText="No"
+          >
+            <Button icon={<DeleteOutlined />} size="middle" />
+          </Popconfirm>
+        </div>
+      ),
+    },
   ];
 
   return (
@@ -140,17 +251,19 @@ export default function Products() {
           <p className="text-2xl font-bold mb-4">
             Total Products: {filteredProducts.length}
           </p>
-          <Button type="primary" onClick={showModal}>
+          <Button type="primary" onClick={() => showModal()}>
             Create
           </Button>
         </div>
-        <hr className="mb-4 border-0 h-1 bg-gray-300 rounded-lg" />
+        <hr
+          className="bg-gray-300 rounded-lg"
+          style={{ height: 4, background: "#001529", borderRadius: "50px" }}
+        />
         <div
-          className="flex gap-10 mb-4"
           style={{
             display: "flex",
             justifyContent: "space-between",
-            marginBottom: 25,
+            marginBottom: 10,
           }}
         >
           <Input
@@ -172,58 +285,38 @@ export default function Products() {
                 }}
               />
             }
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = "#40a9ff";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = "#d9d9d9";
-            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.borderColor = "#40a9ff")
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.borderColor = "#d9d9d9")
+            }
           />
           <Select
             placeholder="Filter by gender"
             value={filterGender}
             onChange={(value) => setFilterGender(value)}
-            className=""
-            style={{ borderRadius: "5px", width: 250 }}
+            style={{
+              borderRadius: "5px",
+              width: 250,
+              borderColor: "#d9d9d9",
+              transition: "border-color 0.3s ease",
+            }}
           >
-            <Select.Option value="">All</Select.Option>
             <Select.Option value="male">Male</Select.Option>
             <Select.Option value="female">Female</Select.Option>
           </Select>
         </div>
-        <Table
-          dataSource={filteredProducts}
-          columns={columns}
-          rowKey="id"
-          pagination={false}
-          style={{
-            borderRadius: "5px",
-            boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
-          }}
-          className="bg-red-500"
-          rowClassName={(_, index) =>
-            index % 2 === 0 ? "bg-gray-50" : "bg-white"
-          }
-        />
       </div>
-
+      <Table columns={columns} dataSource={filteredProducts} rowKey="id" />
       <Modal
-        title="Add New Product"
+        title={editText ? "Edit Product" : "Create Product"}
         visible={isModalVisible}
         onOk={handleOk}
         onCancel={handleCancel}
-        okText="Add Product"
-        cancelText="Cancel"
-        maskClosable={false}
-        centered
-        width={400}
+        okText={editText ? "Save" : "Create"}
       >
-        <Form
-          form={form}
-          name="add_product"
-          layout="vertical"
-          onFinish={handleOk}
-        >
+        <Form form={form} layout="vertical">
           <Form.Item
             name="name"
             label="Product Name"
@@ -233,58 +326,67 @@ export default function Products() {
           >
             <Input />
           </Form.Item>
-
           <Form.Item
             name="description"
-            label="Product Description"
+            label="Description"
             rules={[
-              {
-                required: true,
-                message: "Please input the product description!",
-              },
+              { required: true, message: "Please input the description!" },
             ]}
           >
-            <Input.TextArea />
+            <Input.TextArea rows={3} />
           </Form.Item>
           <Form.Item
             name="price"
-            label="Product Price"
-            rules={[
-              { required: true, message: "Please input the product price!" },
-            ]}
+            label="Price"
+            rules={[{ required: true, message: "Please input the price!" }]}
           >
             <Input type="number" />
           </Form.Item>
-
-          <Form.Item
-            name="image"
-            label="Product Image"
-            valuePropName="fileList"
-            getValueFromEvent={(e) => (Array.isArray(e) ? e : e && e.fileList)}
-          >
-            <Upload
-              name="logo"
-              listType="picture-card"
-              beforeUpload={() => false}
-            >
-              <div>
-                <UploadOutlined />
-                <div style={{ marginTop: 8 }}>Upload</div>
-              </div>
-            </Upload>
-          </Form.Item>
-
           <Form.Item
             name="gender"
             label="Gender"
-            rules={[{ required: true, message: "Please select the gender!" }]}
+            rules={[{ required: true, message: "Please select gender!" }]}
           >
             <Radio.Group>
               <Radio value="male">Male</Radio>
               <Radio value="female">Female</Radio>
             </Radio.Group>
           </Form.Item>
+          <Form.Item label="Sizes">
+            <Checkbox.Group
+              options={[
+                { label: "S", value: "S" },
+                { label: "M", value: "M" },
+                { label: "L", value: "L" },
+                { label: "XL", value: "XL" },
+              ]}
+              value={sizes}
+              onChange={(checkedValues) => setSizes(checkedValues as string[])}
+            />
+          </Form.Item>
+          <Form.Item
+            name="image"
+            label="Image"
+            rules={[{ required: true, message: "Please upload an image!" }]}
+          >
+            <Upload
+              listType="picture"
+              fileList={file}
+              beforeUpload={() => false}
+              onChange={({ fileList }) => setFile(fileList)}
+              maxCount={1}
+            >
+              <Button icon={<UploadOutlined />}>Upload</Button>
+            </Upload>
+          </Form.Item>
         </Form>
+      </Modal>
+      <Modal
+        visible={imagePreviewVisible}
+        footer={null}
+        onCancel={() => setImagePreviewVisible(false)}
+      >
+        <Image src={imageUrls[0]} style={{ width: "100%" }} />
       </Modal>
     </div>
   );
