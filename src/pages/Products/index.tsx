@@ -67,7 +67,7 @@ export default function Products() {
         setProducts(productsData as Product[]);
       } catch (error) {
         console.error("Error fetching products: ", error);
-        message.error("Mahsulotlarni olishda xatolik yuz berdi.");
+        message.error("Failed to fetch products.");
       }
     };
 
@@ -162,7 +162,7 @@ export default function Products() {
             : product
         );
         setProducts(updateProducts);
-        message.success("Mahsulot muvaffaqiyatli yangilandi!");
+        message.success("Product updated successfully!");
       } else {
         const newProduct: Product = {
           ...values,
@@ -170,12 +170,12 @@ export default function Products() {
         const docRef = await addDoc(collection(db, "products"), newProduct);
         newProduct.id = docRef.id;
         setProducts([...products, newProduct]);
-        message.success("Mahsulot muvaffaqiyatli qo'shildi!");
+        message.success("Product added successfully!");
       }
       setIsModalVisible(false);
     } catch (errorInfo) {
-      console.log("Muvaffaqiyatsizlik:", errorInfo);
-      message.error("Mahsulotni saqlashda xatolik yuz berdi.");
+      console.log("Failed:", errorInfo);
+      message.error("Failed to save product.");
     } finally {
       setLoading(false);
     }
@@ -207,8 +207,8 @@ export default function Products() {
 
       message.success("Product deleted successfully!");
     } catch (error) {
-      console.error("Error deleting product: ", error);
-      message.error("Mahsulotni o'chirishda xatolik yuz berdi.");
+      console.error("Error deleting product:", error);
+      message.error("Failed to delete product.");
     }
   };
 
@@ -298,7 +298,7 @@ export default function Products() {
             size="middle"
           />
           <Popconfirm
-            title="Are you sure to delete this product?"
+            title="Are you sure you want to delete this product?"
             onConfirm={() => handleDelete(record.id)}
             okText="Yes"
             cancelText="No"

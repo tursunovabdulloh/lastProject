@@ -13,18 +13,6 @@ const { Header, Sider, Content } = Layout;
 type MenuItem = GetProp<MenuProps, "items">[number];
 const items: MenuItem[] = [
   {
-    key: "title",
-    label: (
-      <h2
-        style={{ color: "#FFF", textAlign: "center", fontSize: 20 }}
-        className=" text-[10px] pt-2 "
-      >
-        SHOP.CO
-      </h2>
-    ),
-    disabled: true,
-  },
-  {
     key: "dashboard",
     icon: <AppstoreAddOutlined style={{ zoom: 1.7 }} />,
     label: (
@@ -69,6 +57,19 @@ export default function Home() {
         width={300}
       >
         <div className="demo-logo-vertical" />
+        label:(
+        <h2
+          style={{
+            marginTop: 25,
+            color: "#FFF",
+            textAlign: "center",
+            fontSize: collapsed ? 13 : 20,
+          }}
+          className=" text-[10px] pt-2 "
+        >
+          SHOP.CO
+        </h2>
+        )
         <ConfigProvider
           theme={{
             components: {
