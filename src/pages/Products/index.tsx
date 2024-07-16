@@ -27,7 +27,7 @@ import {
   getDoc,
   doc,
   deleteDoc,
-  updateDoc,
+  setDoc,
 } from "firebase/firestore";
 import {
   getStorage,
@@ -154,7 +154,7 @@ export default function Products() {
 
       if (editText && currentProduct) {
         const productsDocRef = doc(db, "products", currentProduct.id);
-        await updateDoc(productsDocRef, values);
+        await setDoc(productsDocRef, values, { merge: true });
 
         const updateProducts = products.map((product) =>
           product.id === currentProduct.id
@@ -289,7 +289,7 @@ export default function Products() {
       title: "Actions",
       key: "actions",
       width: 100,
-      render: (record: any) => (
+      render: (record: Product) => (
         <div style={{ display: "flex", gap: 10 }}>
           <Button
             icon={<EditOutlined />}
